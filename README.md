@@ -53,8 +53,7 @@ Edit `config.py`:
 # Set your target account
 TARGET_USERNAME = "elonmusk"  # Change this
 
-# Set a private ntfy topic (use a random string!)
-NTFY_TOPIC = "x-alerts-a8f3k2m9p1q7"  # Change this to something random
+
 ```
 
 > [!IMPORTANT]
@@ -239,3 +238,4 @@ This bot is not affiliated with X (Twitter). Use responsibly and in accordance w
 ---
 
 **Built for speed. Optimized for crypto.**
+
