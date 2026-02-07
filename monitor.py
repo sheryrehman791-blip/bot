@@ -47,12 +47,37 @@ class XMonitor:
         
         playwright = await async_playwright().start()
         
-        # Launch browser with persistent context
+        # Launch browser with persistent context and memory optimizations
         self.context = await playwright.chromium.launch_persistent_context(
             user_data_dir=str(SESSION_DIR),
             headless=HEADLESS,
             viewport={'width': 1280, 'height': 720},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            # Memory optimization flags
+            args=[
+                '--disable-dev-shm-usage',  # Overcome limited resource problems
+                '--disable-blink-features=AutomationControlled',
+                '--no-sandbox',  # Required for Docker
+                '--disable-setuid-sandbox',
+                '--disable-gpu',  # Reduce memory usage
+                '--disable-software-rasterizer',
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-breakpad',
+                '--disable-component-extensions-with-background-pages',
+                '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+                '--disable-ipc-flooding-protection',
+                '--disable-renderer-backgrounding',
+                '--enable-features=NetworkService,NetworkServiceInProcess',
+                '--force-color-profile=srgb',
+                '--hide-scrollbars',
+                '--metrics-recording-only',
+                '--mute-audio',
+                '--no-first-run',
+                '--disable-crash-reporter',
+            ]
         )
         
         # Set default timeout
@@ -171,7 +196,27 @@ class XMonitor:
                 return False
                 
         except Exception as e:
-            logger.error(f"❌ Error checking for new tweet: {e}")
+            error_msg = str(e)
+            
+            # Check if it's a page crash
+            if "Page crashed" in error_msg or "Target closed" in error_msg:
+                logger.error(f"❌ Browser crashed: {error_msg}")
+                logger.info("🔄 Reinitializing browser...")
+                
+                try:
+                    # Close crashed context
+                    if self.context:
+                        await self.context.close()
+                    
+                    # Reinitialize browser
+                    await self.initialize_browser()
+                    logger.info("✅ Browser reinitialized successfully")
+                    
+                except Exception as reinit_error:
+                    logger.error(f"❌ Failed to reinitialize browser: {reinit_error}")
+            else:
+                logger.error(f"❌ Error checking for new tweet: {e}")
+            
             return False
     
     async def run(self):
